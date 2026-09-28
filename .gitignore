@@ -1,0 +1,13 @@
+.DS_Store
+.idea/
+.vscode/
+.env
+.env.*
+!.env.example
+__pycache__/
+*.py[cod]
+.venv/
+venv/
+*.tar
+*.log
+

@@ -1,0 +1,42 @@
+{
+  "family": "webapp-backend-task",
+  "networkMode": "awsvpc",
+  "requiresCompatibilities": ["FARGATE"],
+  "cpu": "256",
+  "memory": "512",
+  "runtimePlatform": {
+    "operatingSystemFamily": "LINUX",
+    "cpuArchitecture": "X86_64"
+  },
+  "executionRoleArn": "arn:aws:iam::917246556472:role/ecsTaskExecutionRole",
+  "taskRoleArn": "arn:aws:iam::917246556472:role/webappBackendTaskRole",
+  "containerDefinitions": [
+    {
+      "name": "backend",
+      "image": "917246556472.dkr.ecr.ca-central-1.amazonaws.com/ecsregisty:backend-1",
+      "essential": true,
+      "portMappings": [
+        {
+          "containerPort": 5000,
+          "hostPort": 5000,
+          "protocol": "tcp"
+        }
+      ],
+      "environment": [
+        {"name": "AWS_REGION", "value": "ca-central-1"},
+        {"name": "TABLE_NAME", "value": "ECStable"},
+        {"name": "ALLOWED_ORIGIN", "value": "REPLACE_WITH_FRONTEND_ORIGIN"}
+      ],
+      "logConfiguration": {
+        "logDriver": "awslogs",
+        "options": {
+          "awslogs-create-group": "true",
+          "awslogs-group": "/ecs/webapp-backend-task",
+          "awslogs-region": "ca-central-1",
+          "awslogs-stream-prefix": "ecs"
+        }
+      }
+    }
+  ]
+}
+

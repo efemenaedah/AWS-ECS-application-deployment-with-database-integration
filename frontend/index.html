@@ -1,0 +1,184 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Job Application Tracker</title>
+    <link rel="stylesheet" href="styles.css">
+    <script defer src="app.js"></script>
+</head>
+<body>
+    <div class="container">
+        <header>
+            <h1>Job Application Tracker</h1>
+            <p class="subtitle">Keep track of your job applications in one place</p>
+        </header>
+
+        <main>
+            <!-- Add Application Form -->
+            <section class="form-section">
+                <h2>Add New Application</h2>
+                <form id="applicationForm" class="application-form">
+                    <div class="form-row">
+                        <div class="form-group">
+                            <label for="companyName">Company Name *</label>
+                            <input type="text" id="companyName" name="companyName"
+                                   placeholder="e.g., CreatorRealm, Google, Microsoft"
+                                   required>
+                        </div>
+                        <div class="form-group">
+                            <label for="role">Job Title *</label>
+                            <input type="text" id="role" name="role"
+                                   placeholder="e.g., Software Engineer, Cloud Architect"
+                                   required>
+                        </div>
+                    </div>
+
+                    <div class="form-row">
+                        <div class="form-group">
+                            <label for="status">Application Status</label>
+                            <select id="status" name="status" onchange="toggleCustomStatus()">
+                                <option value="Applied">Applied</option>
+                                <option value="Interview Scheduled">Interview Scheduled</option>
+                                <option value="Interview Completed">Interview Completed</option>
+                                <option value="Awaiting Offer">Awaiting Offer</option>
+                                <option value="Offer Received">Offer Received</option>
+                                <option value="Hired">Hired</option>
+                                <option value="Rejected">Rejected</option>
+                                <option value="Ghosted">Ghosted</option>
+                                <option value="Withdrawn">Withdrawn</option>
+                                <option value="Other">Other (Custom)</option>
+                            </select>
+                            <input type="text" id="customStatus" name="customStatus"
+                                   placeholder="Enter custom status..."
+                                   class="custom-input"
+                                   style="display: none;">
+                        </div>
+                        <div class="form-group">
+                            <label for="applicationSource">Application Source</label>
+                            <select id="applicationSource" name="applicationSource" onchange="toggleCustomSource()">
+                                <option value="Company Website">Company Website</option>
+                                <option value="CreatorRealm">CreatorRealm</option>
+                                <option value="LinkedIn">LinkedIn</option>
+                                <option value="Indeed">Indeed</option>
+                                <option value="Referral">Referral</option>
+                                <option value="Recruiter">Recruiter</option>
+                                <option value="Job Fair">Job Fair</option>
+                                <option value="AngelList">AngelList</option>
+                                <option value="Other">Other (Custom)</option>
+                            </select>
+                            <input type="text" id="customSource" name="customSource"
+                                   placeholder="Enter custom source..."
+                                   class="custom-input"
+                                   style="display: none;">
+                        </div>
+                    </div>
+
+                    <div class="form-row">
+                        <div class="form-group">
+                            <label for="location">Location</label>
+                            <input type="text" id="location" name="location"
+                                   placeholder="e.g., San Francisco, Remote, New York">
+                        </div>
+                        <div class="form-group">
+                            <label for="dateApplied">Date Applied</label>
+                            <input type="date" id="dateApplied" name="dateApplied" value="">
+                        </div>
+                    </div>
+
+                    <div class="form-row">
+                        <div class="form-group">
+                            <label for="salaryRange">Salary Range</label>
+                            <input type="text" id="salaryRange" name="salaryRange"
+                                   placeholder="e.g., $120k-150k, $80,000-$100,000">
+                        </div>
+                        <div class="form-group">
+                            <label for="actionToTake">Next Action</label>
+                            <input type="text" id="actionToTake" name="actionToTake"
+                                   placeholder="e.g., Follow up in 1 week, Prepare for interview">
+                        </div>
+                    </div>
+
+                    <div class="form-group">
+                        <label for="notes">Notes</label>
+                        <textarea id="notes" name="notes" 
+                                  placeholder="Additional notes about this application, interview feedback, company culture, etc..."
+                                  rows="3"></textarea>
+                    </div>
+
+                    <button type="submit" class="btn btn-primary" id="submitBtn">
+                        <span class="btn-text">Add Application</span>
+                        <span class="btn-loading" style="display: none;">Adding...</span>
+                    </button>
+                </form>
+            </section>
+
+            <!-- Applications List -->
+            <section class="applications-section">
+                <div class="section-header">
+                    <h2>Your Applications</h2>
+                    <div class="header-stats">
+                        <div class="applications-count">
+                            <span id="applicationsCount">0</span> applications
+                        </div>
+                        <div class="filter-buttons">
+                            <button class="btn btn-filter active" onclick="filterApplications('all', this)">All</button>
+                            <button class="btn btn-filter" onclick="filterApplications('Applied', this)">Applied</button>
+                            <button class="btn btn-filter" onclick="filterApplications('Interview Scheduled', this)">Interviews</button>
+                            <button class="btn btn-filter" onclick="filterApplications('Awaiting Offer', this)">Awaiting</button>
+                            <button class="btn btn-filter" onclick="filterApplications('Offer Received', this)">Offers</button>
+                            <button class="btn btn-filter" onclick="filterApplications('Hired', this)">Hired</button>
+                        </div>
+                    </div>
+                </div>
+
+                <div id="loadingState" class="loading-state">
+                    <div class="loading-spinner"></div>
+                    <p>Loading applications...</p>
+                </div>
+
+                <div id="emptyState" class="empty-state" style="display: none;">
+                    <h3>No applications yet!</h3>
+                    <p>Add your first application above to get started tracking your job search.</p>
+                </div>
+
+                <div id="errorState" class="error-state" style="display: none;">
+                    <h3>Something went wrong</h3>
+                    <p>Failed to load applications. <button onclick="fetchApplications()" class="btn-link">Try again</button></p>
+                </div>
+
+                <div id="applicationsList" class="applications-carousel">
+                    <div class="carousel-container">
+                        <button class="carousel-btn carousel-btn-prev" id="prevBtn" onclick="scrollCarousel(-1)">
+                            <span>‹</span>
+                        </button>
+                        <div class="carousel-track" id="carouselTrack"></div>
+                        <button class="carousel-btn carousel-btn-next" id="nextBtn" onclick="scrollCarousel(1)">
+                            <span>›</span>
+                        </button>
+                    </div>
+                    <div class="carousel-dots" id="carouselDots"></div>
+                </div>
+            </section>
+        </main>
+    </div>
+
+    <!-- Footer Credit -->
+    <footer class="footer-credit">
+        <p>Built with guidance from <a href="https://www.linkedin.com/company/techbyedwina/" target="_blank">TechByEdwina</a> - AWS Accredited Instructor</p>
+    </footer>
+
+    <!-- Toast notification -->
+    <div id="toast" class="toast"></div>
+
+    <!-- API Configuration -->
+    <script>
+        // ALB path-based routing sends this path to the backend ECS service.
+        const API_CONFIG = {
+            baseUrl: '/api/applications',
+            timeout: 30000,
+            retryAttempts: 3
+        };
+    </script>
+</body>
+</html>
