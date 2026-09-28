@@ -479,6 +479,23 @@ Any positive weight sends all matching traffic to the backend when only one targ
 
 Task-definition templates are provided under `infrastructure/ecs/`.
 
+Create the CloudWatch log groups before starting the tasks:
+
+```bash
+aws logs create-log-group \
+  --log-group-name /ecs/webapp-backend-task \
+  --region ca-central-1 \
+  --profile default
+
+aws logs create-log-group \
+  --log-group-name /ecs/webapp-frontend-task \
+  --region ca-central-1 \
+  --profile default
+```
+
+If a log group already exists, the corresponding command returns an
+`ResourceAlreadyExistsException`; no additional action is required.
+
 ### Backend task definition
 
 - Family: `webapp-backend-task`

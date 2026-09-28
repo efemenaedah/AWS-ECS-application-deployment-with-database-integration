@@ -24,7 +24,6 @@
       "logConfiguration": {
         "logDriver": "awslogs",
         "options": {
-          "awslogs-create-group": "true",
           "awslogs-group": "/ecs/webapp-frontend-task",
           "awslogs-region": "ca-central-1",
           "awslogs-stream-prefix": "ecs"
