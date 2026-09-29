@@ -6,9 +6,7 @@
 [![Database](https://img.shields.io/badge/Amazon-DynamoDB-4053D6?logo=amazondynamodb&logoColor=white)](https://aws.amazon.com/dynamodb/)
 [![License](https://img.shields.io/badge/License-MIT-green.svg)](LICENSE)
 
-A production-style, two-tier Job Application Tracker deployed on Amazon ECS Fargate. The static frontend runs in NGINX, the Python backend runs with Flask and Gunicorn, an internet-facing Application Load Balancer performs path-based routing, and Amazon DynamoDB provides managed persistence.
-
-> This repository documents a completed hands-on deployment in the Canada (Central) Region. It intentionally excludes exported Docker image archives and credentials. The containers can be rebuilt from the included source and Dockerfiles.
+A production-style three-tier Web Application deployed on Amazon ECS Fargate. The static frontend runs in NGINX, the Python backend runs with Flask and Gunicorn, an internet-facing Application Load Balancer performs path-based routing and Amazon DynamoDB stores data and manage persistence.
 
 ## Architecture
 
@@ -77,10 +75,6 @@ The ALB is deployed in two public subnets. The frontend and backend tasks are de
 ## 1. Install the local tools on macOS
 
 ### 1.1 Install Apple command-line tools
-
-```bash
-xcode-select --install
-```
 
 ### 1.2 Install Homebrew
 
