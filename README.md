@@ -6,6 +6,8 @@
 [![Database](https://img.shields.io/badge/Amazon-DynamoDB-4053D6?logo=amazondynamodb&logoColor=white)](https://aws.amazon.com/dynamodb/)
 [![License](https://img.shields.io/badge/License-MIT-green.svg)](LICENSE)
 
+<img width="2020" height="387" alt="mermaid-diagram" src="https://github.com/user-attachments/assets/26da5013-09b5-4dfc-a885-e3d9e2fba6cb" />
+
 A production-style three-tier Web Application deployed on Amazon ECS Fargate. The static frontend runs in NGINX, the Python backend runs with Flask and Gunicorn, an internet-facing Application Load Balancer performs path-based routing and Amazon DynamoDB stores data and manage persistence.
 
 ## Architecture
