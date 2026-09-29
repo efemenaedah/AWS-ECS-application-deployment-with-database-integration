@@ -10,22 +10,9 @@ A production-style three-tier Web Application deployed on Amazon ECS Fargate. Th
 
 ## Architecture
 
-```mermaid
-flowchart TD
-    User["Browser"] --> ALB["Internet-facing ALB"]
-    ALB -->|"/ and static files"| FTG["Frontend target group :80"]
-    ALB -->|"/api/*"| BTG["Backend target group :5000"]
-    FTG --> F1["Frontend Fargate task"]
-    FTG --> F2["Frontend Fargate task"]
-    BTG --> B1["Backend Fargate task"]
-    BTG --> B2["Backend Fargate task"]
-    B1 --> DDB["DynamoDB: ECStable"]
-    B2 --> DDB
-```
-
 The ALB is deployed in two public subnets. The frontend and backend tasks are deployed in private subnets across two Availability Zones. Backend tasks access DynamoDB using the permissions assigned to the ECS task role.
 
-## Deployed resource summary
+## Deployed resources
 
 | Component | Project setting |
 |---|---|
@@ -58,7 +45,6 @@ The ALB is deployed in two public subnets. The frontend and backend tasks are de
 │   ├── index.html
 │   ├── styles.css
 │   ├── app.js
-│   └── .dockerignore
 ├── images/
 │   └── screenshots/
 ├── infrastructure/
@@ -111,24 +97,16 @@ The current AWS CLI supports browser-based sign-in with temporary credentials:
 
 ```bash
 aws login --profile default
+aws login
 ```
-
-If the AWS account uses IAM Identity Center instead:
-
-```bash
-aws configure sso --profile default
-aws sso login --profile default
 ```
-
 Set the default Region and verify the identity:
 
 ```bash
 aws configure set region ca-central-1 --profile default
 aws configure set output json --profile default
 aws sts get-caller-identity --profile default
-```
-
-Do not store long-lived AWS access keys, browser login caches or ECR authorization tokens in this repository.
+```     
 
 ## 3. Clone the frontend source
 
@@ -140,7 +118,7 @@ cd Serverless-Job-Application-Tracker-Project
 ls
 ```
 
-Expected files:
+frontend files:
 
 ```text
 app.js
@@ -149,24 +127,13 @@ styles.css
 README.md
 ```
 
-For this ECS version, the frontend files are under `frontend/`. The API URL in `frontend/app.js` is relative:
-
 ```javascript
 const API_URL = "/api/applications";
 ```
 
-This is important because the ALB sends `/api/*` to the backend target group. Do not use `localhost:5000` in production browser code.
-
-To clone this complete ECS repository:
-
-```bash
-git clone https://github.com/efemenaedah/AWS-ECS-application-deployment-with-database-integration.git
-cd AWS-ECS-application-deployment-with-database-integration
-```
-
 ## 4. Review the container definitions
 
-### Frontend
+### Frontend image build
 
 The frontend Dockerfile uses NGINX Alpine and copies the frontend build context to the NGINX document root:
 
@@ -179,7 +146,7 @@ COPY . /usr/share/nginx/html/
 EXPOSE 80
 ```
 
-### Backend
+### Backend image build 
 
 The backend Dockerfile installs the Python dependencies and starts Gunicorn on port `5000`:
 
@@ -199,7 +166,7 @@ EXPOSE 5000
 CMD ["gunicorn", "--bind", "0.0.0.0:5000", "--workers", "2", "--threads", "4", "--access-logfile", "-", "--error-logfile", "-", "app:app"]
 ```
 
-The backend exposes:
+The backend app.py file actions:
 
 | Method | Path | Purpose |
 |---|---|---|
@@ -210,8 +177,7 @@ The backend exposes:
 
 ## 5. Build and test the images
 
-The supplied OCI archives report `linux/amd64`, so the example builds explicitly target AMD64. The ECS task-definition templates use `X86_64`. If ARM64 is preferred, change both the Docker build platform and ECS task CPU architecture together.
-
+The OCI archives report `linux/amd64`, so the builds explicitly target AMD64. 
 ```bash
 docker buildx build \
   --platform linux/amd64 \
@@ -246,9 +212,7 @@ Run the frontend locally:
 docker run --rm --name job-tracker-frontend -p 8080:80 my-frontend-app:1
 ```
 
-Open <http://localhost:8080>. The UI will load, but API operations require either the backend or the deployed ALB.
-
-The backend requires AWS credentials and the `TABLE_NAME` variable. For local testing, pass a valid AWS profile carefully rather than baking credentials into the image.
+Open <http://localhost:8080>. Access to frontend is granted but API operations require either the backend or the deployed ALB.
 
 ## 6. Create the DynamoDB table
 
@@ -289,23 +253,11 @@ export ECR_REGISTRY="$AWS_ACCOUNT_ID.dkr.ecr.$AWS_REGION.amazonaws.com"
 
 Create the private ECR repository if it does not already exist:
 
-```bash
-aws ecr describe-repositories \
-  --repository-names "$ECR_REPOSITORY" \
-  --region "$AWS_REGION" \
-  --profile default \
-|| aws ecr create-repository \
-  --repository-name "$ECR_REPOSITORY" \
-  --image-scanning-configuration scanOnPush=true \
-  --region "$AWS_REGION" \
-  --profile default
-```
-
 Authenticate Docker to the private registry:
 
 ```bash
 aws ecr get-login-password \
-  --region "$AWS_REGION" \
+  --region "$ca-central-1" \
   --profile default \
 | docker login \
   --username AWS \
@@ -315,18 +267,18 @@ aws ecr get-login-password \
 Tag the two images:
 
 ```bash
-docker tag my-frontend-app:1 \
-  "$ECR_REGISTRY/$ECR_REPOSITORY:frontend-1"
+docker tag my-frontend-app:1 \                                                   
+  917246556472.dkr.ecr.ca-central-1.amazonaws.com/ecsregisty:frontend-1
 
-docker tag my-backend-app:1 \
-  "$ECR_REGISTRY/$ECR_REPOSITORY:backend-1"
+docker tag my-backend-app:1 \                                                   
+  917246556472.dkr.ecr.ca-central-1.amazonaws.com/ecsregisty:frontend-1
 ```
 
 Push:
 
 ```bash
-docker push "$ECR_REGISTRY/$ECR_REPOSITORY:frontend-1"
-docker push "$ECR_REGISTRY/$ECR_REPOSITORY:backend-1"
+docker push 917246556472.dkr.ecr.ca-central-1.amazonaws.com/ecsregisty:frontend-1
+docker push 917246556472.dkr.ecr.ca-central-1.amazonaws.com/ecsregisty:backend-1
 ```
 
 Verify:
@@ -364,9 +316,9 @@ The CIDRs above are reproducible examples; use the non-overlapping CIDRs assigne
 4. Create a NAT gateway in a public subnet with an Elastic IP.
 5. Create private route tables and add `0.0.0.0/0 → NAT gateway`.
 6. Associate each private subnet with its private route table.
-7. Optionally add a DynamoDB gateway endpoint to keep DynamoDB traffic on the AWS network.
+7. Optionally add a DynamoDB gateway interface endpoint to keep DynamoDB traffic on the AWS network.
 
-For a production multi-AZ design, use one NAT gateway per Availability Zone. This project uses one NAT gateway to reduce lab cost.
+For a production multi-AZ design, use one NAT gateway per Availability Zone. This project uses one NAT gateway to reduce cost.
 
 ![VPC resource map](images/screenshots/01-vpc-resource-map.png)
 
@@ -379,7 +331,7 @@ Inbound:
 | Protocol | Port | Source |
 |---|---:|---|
 | TCP | 80 | `0.0.0.0/0` |
-| TCP | 443 | `0.0.0.0/0` after HTTPS is configured |
+| TCP | 443 | `0.0.0.0/0` |
 
 Outbound:
 
@@ -397,7 +349,7 @@ Inbound:
 | TCP | 80 | `webapp-alb-sg` |
 | TCP | 5000 | `webapp-alb-sg` |
 
-For the initial deployment, allow outbound traffic to `0.0.0.0/0`. This lets tasks reach ECR, CloudWatch Logs, DynamoDB and other required AWS APIs through NAT. Restrict egress later by using VPC endpoints and HTTPS-only rules.
+For the initial deployment, allow outbound traffic to `0.0.0.0/0`. This lets tasks reach ECR, CloudWatch Logs, DynamoDB and other required AWS APIs through NAT. Restrict egress later afterwards by using VPC endpoints and HTTPS-only rules.
 
 ## 10. Create the IAM roles
 
@@ -421,7 +373,7 @@ The application currently requires only:
 - `dynamodb:PutItem`
 - `dynamodb:Scan`
 
-Do not attach DynamoDB permissions to the execution role. The backend receives DynamoDB permissions from its task role.
+we do not attach DynamoDB permissions to the execution role (ecsTaskExecutionRole) . The backend receives DynamoDB permissions from its task role.
 
 ## 11. Create the target groups
 
@@ -496,10 +448,10 @@ If a log group already exists, the corresponding command returns an
 - Launch type: Fargate
 - Network mode: `awsvpc`
 - OS/architecture: Linux/X86_64
-- CPU/memory: 0.25 vCPU / 0.5 GB
+- CPU/memory: 0.25 vCPU / 0.5 GB for this project
 - Execution role: `ecsTaskExecutionRole`
 - Task role: `webappBackendTaskRole`
-- Image: `917246556472.dkr.ecr.ca-central-1.amazonaws.com/ecsregisty:backend-1`
+- Image: `917246556472.dkr.ecr.ca-central-1.amazonaws.com/ecsregisty:backend-1` (ECS image Url)
 - Container port: `5000`
 - CloudWatch logs: enabled
 
@@ -517,14 +469,12 @@ Environment variables:
 - Launch type: Fargate
 - Network mode: `awsvpc`
 - OS/architecture: Linux/X86_64
-- CPU/memory: 0.25 vCPU / 0.5 GB
+- CPU/memory: 0.25 vCPU / 0.5 GB for this project
 - Execution role: `ecsTaskExecutionRole`
 - Task role: none
-- Image: `917246556472.dkr.ecr.ca-central-1.amazonaws.com/ecsregisty:frontend-1`
+- Image: `917246556472.dkr.ecr.ca-central-1.amazonaws.com/ecsregisty:frontend-1` (ECS image Url)
 - Container port: `80`
 - CloudWatch logs: enabled
-
-Before using the JSON templates, replace `REPLACE_WITH_FRONTEND_ORIGIN` in the backend template.
 
 ## 15. Create the backend ECS service
 
@@ -547,7 +497,7 @@ From `webapp-cluster`, create a service:
 15. Container/port: backend/`5000`.
 16. Target group: `webapp-backend-tg`.
 
-Leave CloudWatch deployment alarms disabled for the first deployment. Add them after normal traffic has established a baseline. If bake time is required, use `5 minutes`.
+Leave CloudWatch deployment alarms disabled for the first deployment. Add after normal traffic has established a baseline. If bake time is required, we use `5 minutes`.
 
 ## 16. Create the frontend ECS service
 
@@ -567,7 +517,7 @@ Create the second service:
 12. Container/port: frontend/`80`.
 13. Target group: `webapp-frontend-tg`.
 
-After both services stabilize, each target group should show two healthy task IPs.
+After both services stabilize, each target group should now show two healthy task IPs.
 
 ## 17. Validate the deployment
 
@@ -601,24 +551,11 @@ curl -X POST "http://$ALB_DNS/api/applications" \
   }'
 ```
 
-Confirm that the item appears in `ECStable` and contains:
+Confirm that the item appears in `ECStable` (dynamodb)  and contains:
 
 - `applicationId`
 - `createdAt`
 - `lastUpdated`
-
-## Troubleshooting
-
-| Symptom | Checks |
-|---|---|
-| Task remains in `PENDING` | Verify private-subnet NAT/VPC endpoints, execution role and Fargate capacity |
-| `CannotPullContainerError` | Check the ECR URI, image tag, execution role and outbound connectivity |
-| Target is unhealthy | Confirm port, task SG source, health path and Gunicorn/NGINX logs |
-| Backend returns `500` | Check `TABLE_NAME`, task-role policy, Region and CloudWatch logs |
-| Frontend loads but API fails | Confirm `app.js` uses `/api/applications` and the ALB `/api/*` rule |
-| `exec format error` | Match image architecture to the ECS task-definition CPU architecture |
-| ECR push says repository does not exist | Tag against `ecsregisty`, not an uncreated repository name |
-| Docker says invalid reference format | Avoid placeholder shell variables that were never assigned |
 
 ## Security and production improvements
 
@@ -630,18 +567,8 @@ Confirm that the item appears in `ECStable` and contains:
 - Enable DynamoDB point-in-time recovery for production data.
 - Add AWS WAF, CloudTrail, GuardDuty and centralized alarms as required.
 - Add ECS auto scaling after collecting CPU, memory and request-count baselines.
-- Create CloudWatch alarms for unhealthy hosts, 5xx errors, CPU and memory.
+- Create CloudWatch alarms for unhealthy hosts, CPU and memory.
 - Manage the infrastructure with Terraform or CloudFormation for repeatable environments.
-
-## Cost control
-
-The main continuously billed resources are the Application Load Balancer, Fargate tasks and NAT gateway. For a learning environment:
-
-1. Scale both ECS services to zero when testing is complete.
-2. Delete the NAT gateway when it is no longer required.
-3. Delete the ALB and release unused Elastic IP addresses.
-4. Apply ECR lifecycle rules to remove old image tags.
-5. Keep DynamoDB in on-demand mode for irregular traffic.
 
 ## License
 
